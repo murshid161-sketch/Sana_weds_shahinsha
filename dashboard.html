@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<title>Dashboard · Sana & Shahinsha</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Italiana&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+:root{
+  --bg:#f5f0e8;--bg2:#ede8df;--bg3:#e5ddd0;
+  --maroon:#8b1a1a;--gold:#9a7b3a;--gold2:#c9a96e;
+  --muted:#6b5a4a;--card:#fff;--text:#1a0f0a;
+  --border:rgba(154,123,58,.2);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;min-height:100vh;background:var(--bg);color:var(--text);font-family:'Cormorant Garamond',serif;font-size:17px;-webkit-font-smoothing:antialiased}
+
+/* ── LOGIN ── */
+#loginScreen{position:fixed;inset:0;z-index:1000;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 28px;text-align:center}
+.login-title{font-family:'Italiana',serif;font-size:34px;margin-bottom:6px}
+.login-sub{font-family:'Cinzel',serif;font-size:9px;letter-spacing:.45em;color:var(--gold2);margin-bottom:40px}
+.login-input{width:100%;max-width:320px;padding:14px 18px;border:1.5px solid var(--border);border-radius:8px;background:var(--card);font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--text);outline:none;text-align:center;letter-spacing:.15em;margin-bottom:14px}
+.login-input:focus{border-color:var(--gold)}
+.login-btn{width:100%;max-width:320px;padding:14px;background:var(--maroon);color:#f5ede0;border:none;border-radius:8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.35em;cursor:pointer}
+.login-err{color:var(--maroon);font-size:14px;margin-top:10px;font-style:italic;min-height:20px}
+
+/* ── MAIN ── */
+#app{display:none;padding:0 0 60px}
+.top-bar{background:var(--text);padding:18px 22px 14px;display:flex;align-items:center;justify-content:space-between}
+.top-bar-title{font-family:'Cinzel',serif;font-size:10px;letter-spacing:.4em;color:var(--gold2)}
+.top-bar-names{font-family:'Italiana',serif;font-size:22px;color:#f5ede0}
+.logout-btn{font-family:'Cinzel',serif;font-size:8px;letter-spacing:.25em;color:rgba(201,169,110,.5);background:none;border:none;cursor:pointer;padding:4px 8px}
+
+/* ── STATS ── */
+.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:18px 16px 8px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 14px;text-align:center}
+.stat-num{font-family:'Cinzel',serif;font-size:32px;color:var(--maroon);line-height:1}
+.stat-label{font-family:'Cinzel',serif;font-size:7.5px;letter-spacing:.25em;color:var(--muted);margin-top:6px}
+
+/* ── SECTION ── */
+.section{margin:10px 16px 0;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.section-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.section-title{font-family:'Cinzel',serif;font-size:9px;letter-spacing:.35em;color:var(--gold)}
+.section-body{padding:16px 18px}
+
+/* ── LINK GEN ── */
+.link-row{display:flex;gap:8px;margin-bottom:10px}
+.link-input{flex:1;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);font-family:'Cormorant Garamond',serif;font-size:17px;color:var(--text);outline:none}
+.link-input:focus{border-color:var(--gold)}
+.gen-btn{padding:12px 16px;background:var(--maroon);color:#f5ede0;border:none;border-radius:8px;font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:.2em;cursor:pointer;white-space:nowrap}
+.link-out{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:14px;color:var(--muted);word-break:break-all;min-height:46px;margin-bottom:10px;line-height:1.5;display:none}
+.link-actions{display:flex;gap:8px}
+.link-act-btn{flex:1;padding:11px;border:1.5px solid var(--border);border-radius:8px;background:transparent;font-family:'Cinzel',serif;font-size:8px;letter-spacing:.2em;color:var(--gold);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.link-act-btn:active{background:var(--bg2)}
+
+/* ── FILTER ── */
+.filter-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+.filter-btn{padding:8px 14px;border:1.5px solid var(--border);border-radius:999px;background:transparent;font-family:'Cinzel',serif;font-size:8px;letter-spacing:.2em;color:var(--muted);cursor:pointer}
+.filter-btn.active{background:var(--maroon);color:#f5ede0;border-color:var(--maroon)}
+
+/* ── RSVP LIST ── */
+.rsvp-card{border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;background:var(--bg)}
+.rsvp-name{font-family:'Cinzel',serif;font-size:11px;letter-spacing:.2em;color:var(--text);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.rsvp-badge{font-family:'Cinzel',serif;font-size:7.5px;letter-spacing:.2em;padding:3px 10px;border-radius:999px}
+.rsvp-badge.yes{background:rgba(139,26,26,.1);color:var(--maroon)}
+.rsvp-badge.no{background:rgba(107,90,74,.1);color:var(--muted)}
+.rsvp-events{font-size:14px;color:var(--muted);font-style:italic;line-height:1.7;margin-bottom:4px}
+.rsvp-guests{font-family:'Cinzel',serif;font-size:8px;letter-spacing:.15em;color:var(--gold);margin-bottom:4px}
+.rsvp-time{font-family:'Cinzel',serif;font-size:7px;letter-spacing:.15em;color:rgba(107,90,74,.5);margin-top:6px}
+.no-rsvp{text-align:center;padding:30px 0;font-style:italic;color:var(--muted)}
+
+/* ── EXPORT ── */
+.export-btn{width:100%;padding:13px;background:transparent;border:1.5px solid var(--border);border-radius:8px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:.3em;color:var(--gold);cursor:pointer;margin-top:4px}
+.export-btn:active{background:var(--bg2)}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--maroon);color:#f5ede0;padding:11px 22px;border-radius:999px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.2em;opacity:0;transition:all .3s;z-index:9999;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── LIVE DOT ── */
+.live-dot{width:7px;height:7px;border-radius:50%;background:#4caf50;display:inline-block;margin-right:6px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.divider{height:1px;background:var(--border);margin:0 16px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-title">Sana & Shahinsha</div>
+  <div class="login-sub">DASHBOARD · AUGUST 2026</div>
+  <input class="login-input" id="pwInput" type="password" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"/>
+  <button class="login-btn" onclick="doLogin()">ENTER</button>
+  <div class="login-err" id="loginErr"></div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+  <div class="top-bar">
+    <div>
+      <div class="top-bar-title">DIGIWED DASHBOARD</div>
+      <div class="top-bar-names">Sana & Shahinsha</div>
+    </div>
+    <button class="logout-btn" onclick="doLogout()">LOGOUT</button>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-num" id="statTotal">—</div>
+      <div class="stat-label">TOTAL RSVPs</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="statAttending">—</div>
+      <div class="stat-label">ATTENDING</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="statGuests">—</div>
+      <div class="stat-label">TOTAL GUESTS</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="statDeclined">—</div>
+      <div class="stat-label">NOT ATTENDING</div>
+    </div>
+  </div>
+
+  <!-- PERSONALISED LINK -->
+  <div class="section" style="margin-top:16px">
+    <div class="section-head">
+      <span class="section-title">✦ PERSONALISED LINK</span>
+    </div>
+    <div class="section-body">
+      <div class="link-row">
+        <input class="link-input" id="guestNameInput" type="text" placeholder="Guest name…" oninput="generateLink()"/>
+        <button class="gen-btn" onclick="generateLink()">GENERATE</button>
+      </div>
+      <div class="link-out" id="linkOut"></div>
+      <div class="link-actions" id="linkActions" style="display:none">
+        <button class="link-act-btn" onclick="copyLink()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          COPY
+        </button>
+        <button class="link-act-btn" onclick="whatsappLink()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+          WHATSAPP
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RSVP LIST -->
+  <div class="section" style="margin-top:12px">
+    <div class="section-head">
+      <span class="section-title"><span class="live-dot"></span>RSVP RESPONSES</span>
+      <button class="export-btn" style="width:auto;padding:7px 14px;margin:0;font-size:8px" onclick="exportCSV()">EXPORT CSV</button>
+    </div>
+    <div class="section-body" style="padding-bottom:8px">
+
+      <!-- Filter -->
+      <div class="filter-row">
+        <button class="filter-btn active" data-ev="all" onclick="setFilter(this)">ALL</button>
+      </div>
+
+      <div id="rsvpList"><div class="no-rsvp">Loading…</div></div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────
+const PASSWORD  = 'sanashahinsha2026';
+const BASE_URL  = 'https://murshid161-sketch.github.io/Sana_weds_shahinsha/';
+const RSVP_PATH = 'sana-shahinsha/rsvp';
+
+const FB_CFG = {
+  apiKey:"AIzaSy841fvxVl1KeHOro6WKJ72o22izuCpJ-b4",
+  authDomain:"yaseen-jumana-wedding.firebaseapp.com",
+  databaseURL:"https://yaseen-jumana-wedding-default-rtdb.firebaseio.com",
+  projectId:"yaseen-jumana-wedding",
+  storageBucket:"yaseen-jumana-wedding.firebasestorage.app",
+  messagingSenderId:"355557621111",
+  appId:"1:355557621111:web:d0b78c34bfe5a53b69f572"
+};
+
+// ── STATE ────────────────────────────────────────────────────────────────
+let db = null;
+let allRsvps = [];
+let currentFilter = 'all';
+let currentLink = '';
+
+// ── LOGIN ────────────────────────────────────────────────────────────────
+function doLogin(){
+  const val = document.getElementById('pwInput').value.trim();
+  if(val === PASSWORD){
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    initFirebase();
+  } else {
+    document.getElementById('loginErr').textContent = 'Incorrect password';
+    document.getElementById('pwInput').value = '';
+  }
+}
+
+function doLogout(){
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('pwInput').value = '';
+  document.getElementById('loginErr').textContent = '';
+}
+
+// ── FIREBASE ─────────────────────────────────────────────────────────────
+function initFirebase(){
+  try{
+    if(!firebase.apps.length) firebase.initializeApp(FB_CFG);
+    db = firebase.database();
+    listenRsvp();
+  } catch(e){ console.error(e); }
+}
+
+function listenRsvp(){
+  db.ref(RSVP_PATH).on('value', snap => {
+    allRsvps = [];
+    snap.forEach(child => {
+      allRsvps.push({ key: child.key, ...child.val() });
+    });
+    // newest first
+    allRsvps.sort((a,b) => (b.ts||0)-(a.ts||0));
+    updateStats();
+    renderList();
+  });
+}
+
+// ── STATS ────────────────────────────────────────────────────────────────
+function updateStats(){
+  const attending = allRsvps.filter(r=>r.attending);
+  const declined  = allRsvps.filter(r=>!r.attending);
+  const totalGuests = attending.reduce((s,r)=>s+(r.totalMembers||r.members||1),0);
+  document.getElementById('statTotal').textContent    = allRsvps.length;
+  document.getElementById('statAttending').textContent = attending.length;
+  document.getElementById('statGuests').textContent   = totalGuests;
+  document.getElementById('statDeclined').textContent  = declined.length;
+}
+
+// ── FILTER ───────────────────────────────────────────────────────────────
+function setFilter(btn){
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentFilter = btn.dataset.ev;
+  renderList();
+}
+
+// ── RENDER LIST ──────────────────────────────────────────────────────────
+function renderList(){
+  const list = document.getElementById('rsvpList');
+  let data = allRsvps;
+
+  if(currentFilter !== 'all'){
+    data = allRsvps.filter(r => r.attending && r.events && r.events.includes(currentFilter));
+  }
+
+  if(!data.length){
+    list.innerHTML = '<div class="no-rsvp">No responses yet ✦</div>';
+    return;
+  }
+
+  list.innerHTML = data.map(r => {
+    const evDetail = r.eventsDetail || {};
+    const evLines = (r.events||[]).map(ev => {
+      const n = evDetail[ev];
+      return ev + (n ? ' · ' + n + ' guest' + (n>1?'s':'') : '');
+    }).join('<br>');
+    const total = r.totalMembers || r.members || 1;
+    return `<div class="rsvp-card">
+      <div class="rsvp-name">
+        <span>${r.name||'—'}</span>
+        <span class="rsvp-badge ${r.attending?'yes':'no'}">${r.attending?'ATTENDING':'DECLINED'}</span>
+      </div>
+      ${r.attending && evLines ? `<div class="rsvp-events">${evLines}</div>` : ''}
+      ${r.attending ? `<div class="rsvp-guests">${total} GUEST${total>1?'S':''} TOTAL</div>` : ''}
+      <div class="rsvp-time">${r.time||''}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── PERSONALISED LINK ────────────────────────────────────────────────────
+function generateLink(){
+  const name = document.getElementById('guestNameInput').value.trim();
+  const out   = document.getElementById('linkOut');
+  const acts  = document.getElementById('linkActions');
+  if(!name){ out.style.display='none'; acts.style.display='none'; currentLink=''; return; }
+  currentLink = BASE_URL + '?guest=' + encodeURIComponent(name);
+  out.textContent = currentLink;
+  out.style.display = 'block';
+  acts.style.display = 'flex';
+}
+
+function copyLink(){
+  if(!currentLink) return;
+  navigator.clipboard.writeText(currentLink).then(()=>showToast('LINK COPIED ✦')).catch(()=>{
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = currentLink; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('LINK COPIED ✦');
+  });
+}
+
+function whatsappLink(){
+  if(!currentLink) return;
+  const name = document.getElementById('guestNameInput').value.trim();
+  const msg = encodeURIComponent('Dear ' + name + ',\n\nYou are warmly invited to the wedding of Sana & Shahinsha — 22 August 2026.\n\nOpen your personalised invitation here:\n' + currentLink);
+  window.open('https://wa.me/?text=' + msg, '_blank');
+}
+
+// ── EXPORT CSV ───────────────────────────────────────────────────────────
+function exportCSV(){
+  if(!allRsvps.length){ showToast('NO DATA YET'); return; }
+  const headers = ['Name','Attending','Events','Total Guests','Time'];
+  const rows = allRsvps.map(r => [
+    '"'+(r.name||'').replace(/"/g,'""')+'"',
+    r.attending ? 'Yes' : 'No',
+    '"'+((r.events||[]).join(', '))+'"',
+    r.totalMembers||r.members||1,
+    '"'+(r.time||'')+'"'
+  ].join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'akhila-jevins-rsvp.csv';
+  a.click();
+  showToast('CSV DOWNLOADED');
+}
+
+// ── TOAST ────────────────────────────────────────────────────────────────
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
